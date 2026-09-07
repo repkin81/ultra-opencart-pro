@@ -19,16 +19,14 @@ class SyncQueue:
         self.db.commit()
 
     def next_job(self) -> SyncJob | None:
-        job = self.db.scalar(
+        # The worker selects a queued job; SyncService performs the actual
+        # running transition. Scheduler-level locking prevents duplicate
+        # execution in the standalone worker process.
+        return self.db.scalar(
             select(SyncJob)
             .where(SyncJob.status == "queued")
             .order_by(SyncJob.id)
         )
-        if job:
-            job.status = "running"
-            self.db.commit()
-            self.db.refresh(job)
-        return job
 
     def pending_items(self, job_id: int) -> list[SyncItem]:
         return list(self.db.scalars(
