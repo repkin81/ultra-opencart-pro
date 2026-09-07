@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.core import init_database
 from app.models.user import User
 from app.opencart.router import router as opencart_router
+from app.sync.connection_router import router as connection_router
 from app.sync.connector_router import router as connector_router
 from app.sync.router import router as sync_router
 from app.sync.scheduler_router import router as scheduler_router
@@ -19,6 +20,7 @@ app.include_router(auth_router)
 app.include_router(opencart_router)
 app.include_router(sync_router)
 app.include_router(connector_router)
+app.include_router(connection_router)
 app.include_router(scheduler_router)
 
 
