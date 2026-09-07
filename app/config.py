@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     access_token_expire_minutes: int = 60
 
+    # Sync Scheduler
+    sync_interval_seconds: int = 60
+    sync_page_size: int = 100
+    sync_max_retries: int = 3
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
