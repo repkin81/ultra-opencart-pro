@@ -4,12 +4,12 @@ from app.api.deps import get_current_user
 from app.auth.router import router as auth_router
 from app.auth.schemas import UserOut
 from app.config import get_settings
-from app.database import Base, engine
+from app.core import init_database
 from app.models.user import User
 from app.opencart.router import router as opencart_router
 
 settings = get_settings()
-Base.metadata.create_all(bind=engine)
+init_database()
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 app.include_router(auth_router)
