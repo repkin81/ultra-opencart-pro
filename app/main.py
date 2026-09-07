@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.core import init_database
 from app.models.user import User
 from app.opencart.router import router as opencart_router
+from app.sync.router import router as sync_router
 
 settings = get_settings()
 init_database()
@@ -14,6 +15,7 @@ init_database()
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 app.include_router(auth_router)
 app.include_router(opencart_router)
+app.include_router(sync_router)
 
 
 @app.get("/health", tags=["system"])
