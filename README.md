@@ -13,30 +13,47 @@ MVP foundation for an extensible OpenCart automation platform.
 - Argon2 password hashing
 - Pytest
 
+## Sync Core — Stage 2
+
+The Sync Core is the central synchronization layer between OpenCart and the platform. Stage 2 provides:
+
+- authenticated `/sync/push` batch ingestion;
+- sync jobs with progress counters and status;
+- per-item success/failure tracking;
+- entity mapping between external OpenCart IDs and Core IDs;
+- SHA-256 canonical payload checksums;
+- idempotent skipping of unchanged `upsert` payloads;
+- `upsert` and `delete` operations;
+- job execution and status endpoints.
+
+### Sync API
+
+`POST /sync/push` creates a synchronization job from a batch of entities.
+
+`POST /sync/jobs/{job_id}/run` processes the queued job.
+
+`GET /sync/jobs/{job_id}` returns job status and counters.
+
+All Sync Core endpoints require the existing JWT authentication flow.
+
 ## Project structure
 
 ```text
 ultra-opencart-pro/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── database.py
 │   ├── auth/
-│   │   ├── __init__.py
-│   │   ├── router.py
-│   │   ├── schemas.py
-│   │   ├── security.py
-│   │   └── service.py
-│   └── models/
+│   ├── models/
+│   ├── opencart/
+│   └── sync/
 │       ├── __init__.py
-│       └── user.py
+│       ├── models.py
+│       ├── router.py
+│       ├── schemas.py
+│       └── service.py
 ├── tests/
-│   ├── __init__.py
-│   └── test_auth.py
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+│   ├── test_auth.py
+│   └── test_sync.py
+├── .github/workflows/ci.yml
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
