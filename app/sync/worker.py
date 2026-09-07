@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.sync.connector import OpenCartConnector
@@ -9,14 +8,12 @@ from app.sync.service import SyncService
 
 
 class SyncWorker:
-    """Consumes queued synchronization jobs one at a time."""
-
     def __init__(self, db: Session):
         self.db = db
 
-    def run_once(self, connector: OpenCartConnector | None = None) -> SyncJob | None:
+    def run_once(self, connector: OpenCartConnector | None = None, connection_id: int | None = None) -> SyncJob | None:
         queue = SyncQueue(self.db)
-        job = queue.next_job()
+        job = queue.next_job(connection_id=connection_id)
         if job is None:
             return None
         try:
@@ -29,10 +26,10 @@ class SyncWorker:
                 self.db.commit()
             raise
 
-    def drain(self, connector: OpenCartConnector | None = None, limit: int = 10) -> list[SyncJob]:
+    def drain(self, connector: OpenCartConnector | None = None, limit: int = 10, connection_id: int | None = None) -> list[SyncJob]:
         results: list[SyncJob] = []
         for _ in range(limit):
-            job = self.run_once(connector)
+            job = self.run_once(connector, connection_id=connection_id)
             if job is None:
                 break
             results.append(job)

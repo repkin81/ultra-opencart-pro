@@ -13,11 +13,13 @@ class SyncItemIn(BaseModel):
 
 class SyncBatchIn(BaseModel):
     direction: Literal["opencart_to_core", "core_to_opencart"] = "opencart_to_core"
+    connection_id: int | None = Field(default=None, ge=1)
     items: list[SyncItemIn] = Field(default_factory=list, max_length=1000)
 
 
 class SyncJobOut(BaseModel):
     id: int
+    connection_id: int | None
     direction: str
     status: str
     total: int
@@ -28,7 +30,6 @@ class SyncJobOut(BaseModel):
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
-
     model_config = {"from_attributes": True}
 
 

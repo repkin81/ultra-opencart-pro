@@ -12,8 +12,8 @@ def utcnow() -> datetime:
 
 class SyncJob(Base):
     __tablename__ = "sync_jobs"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     direction: Mapped[str] = mapped_column(String(32), default="opencart_to_core")
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     requested_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
@@ -25,15 +25,14 @@ class SyncJob(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
     items: Mapped[list["SyncItem"]] = relationship(back_populates="job", cascade="all, delete-orphan")
 
 
 class SyncItem(Base):
     __tablename__ = "sync_items"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("sync_jobs.id", ondelete="CASCADE"), index=True)
+    connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     entity_type: Mapped[str] = mapped_column(String(64))
     external_id: Mapped[str] = mapped_column(String(128))
     operation: Mapped[str] = mapped_column(String(32))
@@ -43,15 +42,14 @@ class SyncItem(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
     job: Mapped[SyncJob] = relationship(back_populates="items")
 
 
 class SyncMapping(Base):
     __tablename__ = "sync_mappings"
-    __table_args__ = (UniqueConstraint("entity_type", "external_id", name="uq_sync_mapping_external"),)
-
+    __table_args__ = (UniqueConstraint("connection_id", "entity_type", "external_id", name="uq_sync_mapping_connection_external"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     entity_type: Mapped[str] = mapped_column(String(64))
     external_id: Mapped[str] = mapped_column(String(128))
     core_id: Mapped[str] = mapped_column(String(128))

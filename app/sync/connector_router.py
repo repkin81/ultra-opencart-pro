@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.database import get_db
 from app.models.user import User
+from app.sync.connection_models import OpenCartConnection
 from app.sync.connector import OpenCartConnector
 from app.sync.connector_schemas import ConnectorConfig, PullRequest
 from app.sync.puller import OpenCartPuller
@@ -22,29 +23,27 @@ def heartbeat(config: ConnectorConfig, current_user: User = Depends(get_current_
 
 
 @router.post("/pull", response_model=SyncPushOut)
-def pull(
-    request: PullRequest,
-    config: ConnectorConfig,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def pull(request: PullRequest, config: ConnectorConfig, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
+        if request.connection_id is not None:
+            connection = db.get(OpenCartConnection, request.connection_id)
+            if connection is None:
+                raise HTTPException(status_code=404, detail="OpenCart connection not found")
+            if not connection.enabled:
+                raise HTTPException(status_code=409, detail="OpenCart connection is disabled")
         connector = OpenCartConnector(config.base_url, config.api_key, config.timeout)
-        job, accepted, skipped = OpenCartPuller(connector, SyncService(db)).pull(
+        job, accepted, skipped = OpenCartPuller(connector, SyncService(db), request.connection_id).pull(
             request.entity_type, request.page, request.limit, current_user.id
         )
         return SyncPushOut(job_id=job.id, accepted=accepted, skipped=skipped)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/jobs/{job_id}/run", response_model=SyncJobOut)
-def run_job(
-    job_id: int,
-    config: ConnectorConfig,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def run_job(job_id: int, config: ConnectorConfig, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         connector = OpenCartConnector(config.base_url, config.api_key, config.timeout)
         return SyncService(db).process(job_id, connector)

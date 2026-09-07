@@ -23,39 +23,33 @@ def utcnow() -> datetime:
 
 
 class SyncService:
-    """Durable checksum-based bidirectional synchronization service."""
+    """Durable checksum-based bidirectional synchronization with store isolation."""
 
     def __init__(self, db: Session):
         self.db = db
 
     def enqueue(self, batch: SyncBatchIn, user_id: int | None = None) -> tuple[SyncJob, int, int]:
-        job = SyncJob(direction=batch.direction, status="queued", requested_by=user_id, total=0)
+        job = SyncJob(connection_id=batch.connection_id, direction=batch.direction, status="queued", requested_by=user_id, total=0)
         self.db.add(job)
         self.db.flush()
         accepted = skipped = 0
         for item in batch.items:
             checksum = canonical_checksum(item.payload)
             if batch.direction == "core_to_opencart":
-                mapping = self.db.scalar(select(SyncMapping).where(
-                    SyncMapping.entity_type == item.entity_type,
-                    SyncMapping.core_id == item.external_id,
-                ))
+                stmt = select(SyncMapping).where(SyncMapping.entity_type == item.entity_type, SyncMapping.core_id == item.external_id)
             else:
-                mapping = self.db.scalar(select(SyncMapping).where(
-                    SyncMapping.entity_type == item.entity_type,
-                    SyncMapping.external_id == item.external_id,
-                ))
+                stmt = select(SyncMapping).where(SyncMapping.entity_type == item.entity_type, SyncMapping.external_id == item.external_id)
+            if batch.connection_id is not None:
+                stmt = stmt.where(SyncMapping.connection_id == batch.connection_id)
+            else:
+                stmt = stmt.where(SyncMapping.connection_id.is_(None))
+            mapping = self.db.scalar(stmt)
             if mapping and mapping.checksum == checksum and item.operation == "upsert":
                 skipped += 1
                 continue
-            self.db.add(SyncItem(
-                job_id=job.id,
-                entity_type=item.entity_type,
-                external_id=item.external_id,
-                operation=item.operation,
-                payload=json.dumps(item.payload or {}, ensure_ascii=False),
-                checksum=checksum,
-            ))
+            self.db.add(SyncItem(job_id=job.id, connection_id=batch.connection_id, entity_type=item.entity_type,
+                                 external_id=item.external_id, operation=item.operation,
+                                 payload=json.dumps(item.payload or {}, ensure_ascii=False), checksum=checksum))
             accepted += 1
         job.total = accepted
         if accepted == 0:
@@ -75,12 +69,10 @@ class SyncService:
             raise ValueError("Sync job is already running")
         if job.direction == "core_to_opencart" and connector is None:
             raise ValueError("OpenCart connector is required for core_to_opencart jobs")
-
         job.status = "running"
         job.started_at = utcnow()
         self.db.commit()
         items = self.db.scalars(select(SyncItem).where(SyncItem.job_id == job.id).order_by(SyncItem.id)).all()
-
         for item in items:
             if item.status == "success":
                 continue
@@ -100,18 +92,26 @@ class SyncService:
             item.processed_at = utcnow()
             job.processed += 1
             self.db.commit()
-
         job.status = "failed" if job.failed else "completed"
         job.finished_at = utcnow()
         self.db.commit()
         self.db.refresh(job)
         return job
 
+    def _mapping(self, item: SyncItem, *, external: bool) -> SyncMapping | None:
+        stmt = select(SyncMapping).where(SyncMapping.entity_type == item.entity_type)
+        if external:
+            stmt = stmt.where(SyncMapping.external_id == item.external_id)
+        else:
+            stmt = stmt.where(SyncMapping.core_id == item.external_id)
+        if item.connection_id is None:
+            stmt = stmt.where(SyncMapping.connection_id.is_(None))
+        else:
+            stmt = stmt.where(SyncMapping.connection_id == item.connection_id)
+        return self.db.scalar(stmt)
+
     def _apply_to_core(self, item: SyncItem, payload: dict[str, Any]) -> None:
-        mapping = self.db.scalar(select(SyncMapping).where(
-            SyncMapping.entity_type == item.entity_type,
-            SyncMapping.external_id == item.external_id,
-        ))
+        mapping = self._mapping(item, external=True)
         if item.operation == "delete":
             if mapping:
                 self._delete_core(item.entity_type, int(mapping.core_id))
@@ -125,15 +125,12 @@ class SyncService:
             raise ValueError(f"Unsupported entity type: {item.entity_type}")
         self.db.flush()
         if mapping is None:
-            mapping = SyncMapping(entity_type=item.entity_type, external_id=item.external_id, core_id=str(obj.id))
+            mapping = SyncMapping(connection_id=item.connection_id, entity_type=item.entity_type, external_id=item.external_id, core_id=str(obj.id))
             self.db.add(mapping)
         mapping.checksum = item.checksum or canonical_checksum(payload)
 
     def _apply_to_opencart(self, item: SyncItem, payload: dict[str, Any], connector: OpenCartConnector) -> None:
-        mapping = self.db.scalar(select(SyncMapping).where(
-            SyncMapping.entity_type == item.entity_type,
-            SyncMapping.core_id == item.external_id,
-        ))
+        mapping = self._mapping(item, external=False)
         if item.operation == "delete":
             if mapping:
                 external_id = int(mapping.external_id)
@@ -159,7 +156,7 @@ class SyncService:
         if not external_id:
             raise ValueError("OpenCart did not return an external entity id")
         if mapping is None:
-            mapping = SyncMapping(entity_type=item.entity_type, external_id=str(external_id), core_id=item.external_id)
+            mapping = SyncMapping(connection_id=item.connection_id, entity_type=item.entity_type, external_id=str(external_id), core_id=item.external_id)
             self.db.add(mapping)
         else:
             mapping.external_id = str(external_id)

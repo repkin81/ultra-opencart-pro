@@ -11,3 +11,4 @@ class PullRequest(BaseModel):
     entity_type: str = Field(pattern="^(product|category)$")
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=100, ge=1, le=1000)
+    connection_id: int | None = Field(default=None, ge=1)

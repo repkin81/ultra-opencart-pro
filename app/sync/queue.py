@@ -8,7 +8,6 @@ from app.sync.models import SyncItem, SyncJob
 
 class SyncQueue:
     """Database-backed queue for durable Sync Core jobs."""
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -18,19 +17,13 @@ class SyncQueue:
         self.db.add(job)
         self.db.commit()
 
-    def next_job(self) -> SyncJob | None:
-        # The worker selects a queued job; SyncService performs the actual
-        # running transition. Scheduler-level locking prevents duplicate
-        # execution in the standalone worker process.
-        return self.db.scalar(
-            select(SyncJob)
-            .where(SyncJob.status == "queued")
-            .order_by(SyncJob.id)
-        )
+    def next_job(self, connection_id: int | None = None) -> SyncJob | None:
+        stmt = select(SyncJob).where(SyncJob.status == "queued").order_by(SyncJob.id)
+        if connection_id is None:
+            stmt = stmt.where(SyncJob.connection_id.is_(None))
+        else:
+            stmt = stmt.where(SyncJob.connection_id == connection_id)
+        return self.db.scalar(stmt)
 
     def pending_items(self, job_id: int) -> list[SyncItem]:
-        return list(self.db.scalars(
-            select(SyncItem)
-            .where(SyncItem.job_id == job_id, SyncItem.status == "pending")
-            .order_by(SyncItem.id)
-        ).all())
+        return list(self.db.scalars(select(SyncItem).where(SyncItem.job_id == job_id, SyncItem.status == "pending").order_by(SyncItem.id)).all())
