@@ -9,6 +9,7 @@ from app.models.user import User
 from app.opencart.router import router as opencart_router
 from app.sync.connector_router import router as connector_router
 from app.sync.router import router as sync_router
+from app.sync.scheduler_router import router as scheduler_router
 
 settings = get_settings()
 init_database()
@@ -18,6 +19,7 @@ app.include_router(auth_router)
 app.include_router(opencart_router)
 app.include_router(sync_router)
 app.include_router(connector_router)
+app.include_router(scheduler_router)
 
 
 @app.get("/health", tags=["system"])
