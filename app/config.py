@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     sync_max_retries: int = 3
     sync_opencart_url: str = ""
     sync_opencart_api_key: str = ""
+    sync_scheduler_enabled: bool = True
+    sync_scheduler_poll_seconds: int = 5
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
