@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.sync.schemas import SyncBatchIn, SyncJobOut, SyncPushOut
 from app.sync.service import SyncService
+from app.sync.worker import SyncWorker
 
 router = APIRouter(prefix="/sync", tags=["Sync Core"])
 
@@ -30,6 +31,31 @@ def run_job(
         return SyncService(db).process(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/worker/run-once", response_model=SyncJobOut | None)
+def worker_run_once(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return SyncWorker(db).run_once()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/worker/drain", response_model=list[SyncJobOut])
+def worker_drain(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if limit < 1 or limit > 100:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 100")
+    try:
+        return SyncWorker(db).drain(limit=limit)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/jobs/{job_id}", response_model=SyncJobOut)
