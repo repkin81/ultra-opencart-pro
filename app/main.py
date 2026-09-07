@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
 
 from app.api.deps import get_current_user
@@ -10,12 +12,23 @@ from app.opencart.router import router as opencart_router
 from app.sync.connection_router import router as connection_router
 from app.sync.connector_router import router as connector_router
 from app.sync.router import router as sync_router
+from app.sync.scheduler_manager import scheduler_manager
 from app.sync.scheduler_router import router as scheduler_router
 
 settings = get_settings()
 init_database()
 
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.sync_scheduler_enabled:
+        scheduler_manager.start()
+    yield
+    if scheduler_manager.running:
+        scheduler_manager.stop()
+
+
+app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(opencart_router)
 app.include_router(sync_router)
@@ -26,7 +39,7 @@ app.include_router(scheduler_router)
 
 @app.get("/health", tags=["system"])
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "scheduler": scheduler_manager.running}
 
 
 @app.get("/auth/me", response_model=UserOut, tags=["auth"])
