@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     sync_interval_seconds: int = 60
     sync_page_size: int = 100
     sync_max_retries: int = 3
+    sync_opencart_url: str = ""
+    sync_opencart_api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
