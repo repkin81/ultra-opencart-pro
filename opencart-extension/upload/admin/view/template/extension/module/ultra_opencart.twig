@@ -1,0 +1,26 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right"><button type="submit" form="form-module" class="btn btn-primary"><i class="fa fa-save"></i> {{ button_save }}</button> <a href="{{ cancel }}" class="btn btn-default"><i class="fa fa-reply"></i> {{ button_cancel }}</a></div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb"><li><a href="{{ home }}"><i class="fa fa-home"></i></a></li><li>{{ heading_title }}</li></ul>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if error_warning %}<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> {{ error_warning }} <button type="button" class="close" data-dismiss="alert">&times;</button></div>{% endif %}
+    {% if success %}<div class="alert alert-success"><i class="fa fa-check-circle"></i> {{ success }} <button type="button" class="close" data-dismiss="alert">&times;</button></div>{% endif %}
+    <div class="panel panel-default">
+      <div class="panel-heading"><i class="fa fa-plug"></i> {{ text_edit }}</div>
+      <div class="panel-body">
+        <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-module" class="form-horizontal">
+          <div class="form-group"><label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label><div class="col-sm-10"><select name="module_ultra_opencart_status" id="input-status" class="form-control"><option value="1"{% if module_ultra_opencart_status %} selected{% endif %}>Enabled</option><option value="0"{% if not module_ultra_opencart_status %} selected{% endif %}>Disabled</option></select></div></div>
+          <div class="form-group"><label class="col-sm-2 control-label" for="input-key">{{ entry_api_key }}</label><div class="col-sm-10"><input type="text" name="module_ultra_opencart_api_key" value="{{ module_ultra_opencart_api_key }}" id="input-key" class="form-control" /><p class="help-block">{{ help_api_key }}</p></div></div>
+          <div class="form-group"><label class="col-sm-2 control-label" for="input-limit">{{ entry_log_limit }}</label><div class="col-sm-10"><input type="number" min="1" max="1000" name="module_ultra_opencart_log_limit" value="{{ module_ultra_opencart_log_limit }}" id="input-limit" class="form-control" /></div></div>
+          <div class="form-group"><label class="col-sm-2 control-label">API endpoint</label><div class="col-sm-10"><code>{{ api_endpoint }}</code></div></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}
