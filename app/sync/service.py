@@ -58,6 +58,9 @@ class SyncService:
             ))
             accepted += 1
         job.total = accepted
+        if accepted == 0:
+            job.status = "completed"
+            job.finished_at = utcnow()
         self.db.commit()
         self.db.refresh(job)
         return job, accepted, skipped
