@@ -6,12 +6,14 @@ from app.auth.schemas import UserOut
 from app.config import get_settings
 from app.database import Base, engine
 from app.models.user import User
+from app.opencart.router import router as opencart_router
 
 settings = get_settings()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 app.include_router(auth_router)
+app.include_router(opencart_router)
 
 
 @app.get("/health", tags=["system"])
