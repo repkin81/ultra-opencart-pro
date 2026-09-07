@@ -21,3 +21,18 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run tests
         run: pytest -q
+
+  package-opencart3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build extension ZIP
+        run: |
+          cd opencart-extension
+          zip -r ../ultra-opencart-pro-opencart3.zip upload install.xml README.md
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultra-opencart-pro-opencart3
+          path: ultra-opencart-pro-opencart3.zip
