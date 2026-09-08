@@ -1,10 +1,11 @@
-from app.database import SessionLocal
+from app.database import Base, SessionLocal, engine
 from app.tenants.models import Tenant
 from app.tenants.schemas import TenantCreate
 from app.tenants.service import TenantService
 
 
 def test_tenant_service_creates_isolated_tenant():
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     slug = "test-isolated-tenant"
     try:
