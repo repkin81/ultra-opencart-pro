@@ -14,6 +14,7 @@ from app.sync.connector_router import router as connector_router
 from app.sync.router import router as sync_router
 from app.sync.scheduler_manager import scheduler_manager
 from app.sync.scheduler_router import router as scheduler_router
+from app.sync.webhook_router import router as webhook_router
 
 settings = get_settings()
 init_database()
@@ -35,6 +36,7 @@ app.include_router(sync_router)
 app.include_router(connector_router)
 app.include_router(connection_router)
 app.include_router(scheduler_router)
+app.include_router(webhook_router)
 
 
 @app.get("/health", tags=["system"])
