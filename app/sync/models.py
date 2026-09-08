@@ -13,6 +13,7 @@ def utcnow() -> datetime:
 class SyncJob(Base):
     __tablename__ = "sync_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     direction: Mapped[str] = mapped_column(String(32), default="opencart_to_core")
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
@@ -31,6 +32,7 @@ class SyncJob(Base):
 class SyncItem(Base):
     __tablename__ = "sync_items"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("sync_jobs.id", ondelete="CASCADE"), index=True)
     connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     entity_type: Mapped[str] = mapped_column(String(64))
@@ -49,6 +51,7 @@ class SyncMapping(Base):
     __tablename__ = "sync_mappings"
     __table_args__ = (UniqueConstraint("connection_id", "entity_type", "external_id", name="uq_sync_mapping_connection_external"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=True, index=True)
     connection_id: Mapped[int | None] = mapped_column(ForeignKey("open_cart_connections.id", ondelete="CASCADE"), nullable=True, index=True)
     entity_type: Mapped[str] = mapped_column(String(64))
     external_id: Mapped[str] = mapped_column(String(128))
