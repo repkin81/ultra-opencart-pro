@@ -11,6 +11,7 @@ def migrate_tenant_columns() -> None:
         return
 
     tenant_owned = [
+        "users",
         "open_cart_connections",
         "sync_jobs",
         "sync_items",
